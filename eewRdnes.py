@@ -35,8 +35,8 @@ class sceewv(Application):
                                 print("%s is not in the inventory, please check"%sta)
                         eewSts = self.readBind(sta)
                 print("%i Stations with EEW picker binding"%len(eewSts))
-                #noDat = self.staAval(eewSts)
-                #print("%i Stations with EEW binding but not streaming"%len(noDat))
+                noDat = self.staAval(eewSts)
+                print("%i Stations with EEW binding but not streaming"%len(noDat))
                 eewInvSts = []
                 means = []
                 for sta in eewSts:

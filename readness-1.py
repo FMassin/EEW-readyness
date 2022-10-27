@@ -5,7 +5,7 @@ from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 from obspy.geodetics.base import locations2degrees
 from obspy.signal import PPSD
-from seiscomp import client, core, datamodel, shell, config, system
+from seiscomp import client, core, datamodel, shell, config, system, io
 from seiscomp.client import Inventory, Application
 from seiscomp.kernel import Environment, Module
 from multiprocessing import Pool
@@ -53,22 +53,100 @@ class sceewv(Application):
 		# print("%i Eventos en el catalogo " % (len(events)))
 		# print("%i Eventos con 4Pth tt < 1Sth tt " % (len(densEve)))
 		###1.2.1
-		staNoise = self.readJSON(["psd_value","psd_means_ratio"])
-		staBlack = self.mixSta(staNoise['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with noise alerts %s" % len(staBlack))
-		###3.2.1
-		staTele = self.readJSON("latency")
-		staBlack = self.mixSta(staTele['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with latency alerts %s" % len(staBlack))
-		###3.2.3
-		staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
-		staBlack = self.mixSta(staQC['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with any qc alert %s" % len(staBlack))
+		# staNoise = self.readJSON(["psd_value","psd_means_ratio"])
+		# staBlack = self.mixSta(staNoise['station'], natSts)
+		# print("National stations %s" % len(natSts))
+		# print("National stations with noise alerts %s" % len(staBlack))
+		# ###3.2.1
+		# staTele = self.readJSON("latency")
+		# staBlack = self.mixSta(staTele['station'], natSts)
+		# print("National stations %s" % len(natSts))
+		# print("National stations with latency alerts %s" % len(staBlack))
+		# ###3.2.3
+		# staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
+		# staBlack = self.mixSta(staQC['station'], natSts)
+		# print("National stations %s" % len(natSts))
+		# print("National stations with any qc alert %s" % len(staBlack))
+		###4.1.1
+		deltaDays=180
+		today = date.today()
+		endTime = today
+		startTime = endTime - timedelta(days=deltaDays)
+		# for sta in natSts:
+			# # print("National station %s"%sta.code())
+			# cond = self.ampQuery(sta.code(),startTime)
+			# if cond == 1:
+				# # print("Station with manual amplitude %s"%sta.code())
+				# continue
+			# else:
+				# print("Station without manual amplitude %s"%sta.code())
+		###4.1.2
+		# self.mvsQuery(startTime)
+		for sta in natSts:
+			# print("National station %s"%sta.code())
+			cond = self.mvsQuery(startTime,sta.code())
+			if cond == 1:
+				# print("Station with MVS amplitude %s"%sta.code())
+				continue
+			else:
+				print("Station without MVS amplitude %s"%sta.code())
+		#4.2.1
+		
+		#4.2.3
+		
+		#4.2.4
+		
+		#4.2.5
+		
+		#5.1
+		
+		#5.2
+
 		return True
 
+
+	def mvsQuery(self,startTime,staName):
+		cond = 0
+		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		db = io.DatabaseInterface.Open(eewDBuri)
+		dba = datamodel.DatabaseArchive(db)
+		# build SQL query
+		q = "SELECT * from StationMagnitude " \
+			"WHERE type = 'MVS' "
+		q +="AND creationInfo_creationTime >= '{0}' " \
+			.format(startTime)
+		q += "AND waveformID_stationCode = '{0}' "\
+			.format(staName)
+		ampIt = dba.getObjectIterator(q, datamodel.Amplitude.TypeInfo())
+		amp = datamodel.Amplitude.Cast(ampIt.get())
+		while cond == 0:
+			if amp is None:
+				break
+			else:
+				cond = 1
+				return cond
+
+	def ampQuery(self,staName,startTime):
+		cond = 0
+		evalMode = "0, manual"
+		db = io.DatabaseInterface.Open(self.databaseURI())
+		dba = datamodel.DatabaseArchive(db)
+		# build SQL query
+		q = "SELECT * from Amplitude " \
+			"WHERE amplitude_used = '1' "
+		q +="AND creationInfo_creationTime >= '{0}' " \
+			.format(startTime)
+		q += "AND evaluationMode = 'manual' "
+		q += "AND waveformID_stationCode = '{0}' "\
+			.format(staName)
+		ampIt = dba.getObjectIterator(q, datamodel.Amplitude.TypeInfo())
+		amp = datamodel.Amplitude.Cast(ampIt.get())
+		while cond == 0:
+			if amp is None:
+				break
+			else:
+				cond = 1
+				return cond
 
 	def mixSta(self, stasOne, stasSec):
 		staBlack = []
@@ -153,8 +231,7 @@ class sceewv(Application):
 			if pFourTime < sFstTime:
 				densEve.append(event)
 		return cat, densEve
-
-
+ 
 	def qcquery(self, stName, param, qcMargin):
 		qc_vec = []
 		startTime = core.Time.GMT() - core.TimeSpan(qcMargin)

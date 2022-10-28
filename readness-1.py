@@ -13,7 +13,6 @@ from obspy.taup import TauPyModel
 import pandas as pd
 import numpy as np
 import sys, os, datetime, time, math, fnmatch, json
-import MySQLdb
 
 class sceewv(Application):
 	def __init__(self):
@@ -147,11 +146,11 @@ class sceewv(Application):
 		for eventID in evIDs:
 			cond = 0
 			print("EVENT %s"%eventID)
-			if cond = 0:
-				for obj in query.getOriginsDescending(eventID):
-					origin = datamodel.Origin.Cast(obj)
-					originsID.append(origin.publicID())
-				for oriID in originsID:
+			for obj in query.getOriginsDescending(eventID):
+				origin = datamodel.Origin.Cast(obj)
+				originsID.append(origin.publicID())
+			for oriID in originsID:
+				if cond == 0:
 					origin = query.loadObject(datamodel.Origin.TypeInfo(), oriID)
 					origin = datamodel.Origin.Cast(origin)
 					if isinstance(origin, datamodel.Origin):
@@ -159,7 +158,7 @@ class sceewv(Application):
 							mag = origin.magnitude(mag)
 							for num_com in range(mag.commentCount()):
 								comment = mag.comment(num_com)
-								if comment.id() == EEW:
+								if comment.id() == 'EEW':
 									print("EVENT with EEW message %s "%eventID)
 									cond = 1
 

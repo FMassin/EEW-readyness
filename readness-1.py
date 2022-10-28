@@ -13,7 +13,7 @@ from obspy.taup import TauPyModel
 import pandas as pd
 import numpy as np
 import sys, os, datetime, time, math, fnmatch, json
-
+import MySQLdb
 
 class sceewv(Application):
 	def __init__(self):
@@ -68,7 +68,7 @@ class sceewv(Application):
 		# print("National stations %s" % len(natSts))
 		# print("National stations with any qc alert %s" % len(staBlack))
 		###4.1.1
-		deltaDays=180
+		deltaDays=1
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
@@ -80,18 +80,21 @@ class sceewv(Application):
 				# continue
 			# else:
 				# print("Station without manual amplitude %s"%sta.code())
-		###4.1.2
-		# self.mvsQuery(startTime)
-		for sta in natSts:
-			# print("National station %s"%sta.code())
-			cond = self.mvsQuery(startTime,sta.code())
-			if cond == 1:
-				# print("Station with MVS amplitude %s"%sta.code())
-				continue
-			else:
-				print("Station without MVS amplitude %s"%sta.code())
+		# ###4.1.2
+		# # self.mvsQuery(startTime)
+		# for sta in natSts:
+			# # print("National station %s"%sta.code())
+			# cond = self.mvsQuery(startTime,sta.code())
+			# if cond == 1:
+				# # print("Station with MVS amplitude %s"%sta.code())
+				# continue
+			# else:
+				# print("Station without MVS amplitude %s"%sta.code())
 		#4.2.1
-		
+		# endTime = core.Time.GMT()
+		# startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
+		evIDs = self.IDQuery(startTime,endTime)
+		self.oriQuery(evIDs)
 		#4.2.3
 		
 		#4.2.4
@@ -103,7 +106,58 @@ class sceewv(Application):
 		#5.2
 
 		return True
+		
 
+	def IDQuery(self, startTime, endTime):
+		evIDs = []
+		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		db = io.DatabaseInterface.Open(eewDBuri)
+		dba = datamodel.DatabaseArchive(db)
+		# build SQL query
+		q = "SELECT PEvent.publicID "
+		q += "FROM Event, PublicObject AS PEvent, Origin, PublicObject AS POrigin, Magnitude, PublicObject AS PMagnitude "
+		q += "WHERE Origin._oid = POrigin._oid "
+		q += "AND Event._oid = PEvent._oid "
+		q += "AND Magnitude._oid = PMagnitude._oid "
+		q += "AND Magnitude._parent_oid = Origin._oid "
+		q += "AND Event.preferredOriginID = POrigin.publicID "
+		q += "AND Event.preferredMagnitudeID = PMagnitude.publicID "
+		q += "AND Origin.time_value BETWEEN '{0}' AND '{1}' "\
+			.format(startTime,endTime)
+		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 10.0 AND 14.53 "
+		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -91.4 AND -86.3 "
+		q += "AND Origin.depth_value BETWEEN 0 AND 80 "
+		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 2.0 AND 10.0 "
+		IDIt = dba.getObjectIterator(q, datamodel.Event.TypeInfo())
+		for i in range(IDIt.fieldCount()):
+			evIDs.append(IDIt.field(i))
+		try:
+			while IDIt.next():
+				for i in range(IDIt.fieldCount()):
+					evIDs.append(IDIt.field(i))
+		except:
+			pass
+		return evIDs
+
+	def oriQuery(self, evIDs):
+		originsID=[]
+		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		db = io.DatabaseInterface.Open(eewDBuri)
+		query = datamodel.DatabaseQuery(db)
+		for eventID in evIDs:
+			print("EVENTO %s"%eventID)
+			for obj in query.getOriginsDescending(eventID):
+				origin = datamodel.Origin.Cast(obj)
+				originsID.append(origin.publicID())
+			for oriID in originsID:
+				origin = query.loadObject(datamodel.Origin.TypeInfo(), oriID)
+				origin = datamodel.Origin.Cast(origin)
+				if isinstance(origin, datamodel.Origin):
+					for mag in range(origin.magnitudeCount()):
+						mag = origin.magnitude(mag)
+						for num_com in range(mag.commentCount()):
+							comment = mag.comment(num_com)
+							print(comment.text(),comment.id())
 
 	def mvsQuery(self,startTime,staName):
 		cond = 0

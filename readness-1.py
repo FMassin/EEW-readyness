@@ -145,19 +145,23 @@ class sceewv(Application):
 		db = io.DatabaseInterface.Open(eewDBuri)
 		query = datamodel.DatabaseQuery(db)
 		for eventID in evIDs:
-			print("EVENTO %s"%eventID)
-			for obj in query.getOriginsDescending(eventID):
-				origin = datamodel.Origin.Cast(obj)
-				originsID.append(origin.publicID())
-			for oriID in originsID:
-				origin = query.loadObject(datamodel.Origin.TypeInfo(), oriID)
-				origin = datamodel.Origin.Cast(origin)
-				if isinstance(origin, datamodel.Origin):
-					for mag in range(origin.magnitudeCount()):
-						mag = origin.magnitude(mag)
-						for num_com in range(mag.commentCount()):
-							comment = mag.comment(num_com)
-							print(comment.text(),comment.id())
+			cond = 0
+			print("EVENT %s"%eventID)
+			if cond = 0:
+				for obj in query.getOriginsDescending(eventID):
+					origin = datamodel.Origin.Cast(obj)
+					originsID.append(origin.publicID())
+				for oriID in originsID:
+					origin = query.loadObject(datamodel.Origin.TypeInfo(), oriID)
+					origin = datamodel.Origin.Cast(origin)
+					if isinstance(origin, datamodel.Origin):
+						for mag in range(origin.magnitudeCount()):
+							mag = origin.magnitude(mag)
+							for num_com in range(mag.commentCount()):
+								comment = mag.comment(num_com)
+								if comment.id() == EEW:
+									print("EVENT with EEW message %s "%eventID)
+									cond = 1
 
 	def mvsQuery(self,startTime,staName):
 		cond = 0

@@ -139,11 +139,11 @@ class sceewv(Application):
 		return evIDs
 
 	def oriQuery(self, evIDs):
-		originsID=[]
 		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		query = datamodel.DatabaseQuery(db)
 		for eventID in evIDs:
+			originsID=[]
 			cond = 0
 			print("EVENT %s"%eventID)
 			for obj in query.getOriginsDescending(eventID):
@@ -160,6 +160,7 @@ class sceewv(Application):
 								comment = mag.comment(num_com)
 								if comment.id() == 'EEW':
 									print("EVENT with EEW message %s "%eventID)
+									print(comment.id(),comment.text())
 									cond = 1
 
 	def mvsQuery(self,startTime,staName):

@@ -67,7 +67,7 @@ class sceewv(Application):
 		# print("National stations %s" % len(natSts))
 		# print("National stations with any qc alert %s" % len(staBlack))
 		###4.1.1
-		deltaDays=1
+		deltaDays=30
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
@@ -89,13 +89,19 @@ class sceewv(Application):
 				# continue
 			# else:
 				# print("Station without MVS amplitude %s"%sta.code())
-		#4.2.1
+		##4.2.1
+		
 		# endTime = core.Time.GMT()
 		# startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
-		evIDs = self.IDQuery(startTime,endTime)
-		self.oriQuery(evIDs)
-		#4.2.3
+		#evs = self.IDQuery(startTime,endTime)
+		#self.oriQuery(evs["ID"])
 		
+		##4.2.3
+		
+		evs = self.IDQuery(startTime,endTime)
+		extCat = self.extCat()
+		self.compEve(extCat,evs)
+
 		#4.2.4
 		
 		#4.2.5
@@ -103,9 +109,31 @@ class sceewv(Application):
 		#5.1
 		
 		#5.2
-
 		return True
-		
+
+
+	def compEve(self,extCat,evs):
+		deltaMin = 5
+		deltaDist = 2
+		minute_delta = timedelta(minutes=deltaMin)
+		degree_delta = deltaDist
+		for i in range(len(evs["time"])):
+			oriTime = UTCDateTime(evs["time"][i])
+			oriLat = float(evs["lat"][i])
+			oriLon = float(evs["lon"][i])
+			cond = 0
+			for event in extCat.events:
+				for origin in event.origins:
+					extTime = origin.time
+					deltaTime = timedelta(seconds=abs(extTime-oriTime))
+					deltaLat = abs(origin.latitude - oriLat)
+					deltaLon = abs(origin.longitude - oriLon)
+					if deltaTime < minute_delta and deltaLat < degree_delta and deltaLon < degree_delta:
+						print("Event %s is a True Positive"%evs["ID"][i])
+						cond = 1
+			if cond == 0:
+				print("Event %s is not a True Positive"%evs["ID"][i])
+		return
 
 	def IDQuery(self, startTime, endTime):
 		evIDs = []
@@ -113,7 +141,7 @@ class sceewv(Application):
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
-		q = "SELECT PEvent.publicID "
+		q = "SELECT PEvent.publicID, Origin.latitude_value, Origin.longitude_value, Origin.depth_value, Magnitude.magnitude_value, Origin.time_value "
 		q += "FROM Event, PublicObject AS PEvent, Origin, PublicObject AS POrigin, Magnitude, PublicObject AS PMagnitude "
 		q += "WHERE Origin._oid = POrigin._oid "
 		q += "AND Event._oid = PEvent._oid "
@@ -126,17 +154,28 @@ class sceewv(Application):
 		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 10.0 AND 14.53 "
 		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -91.4 AND -86.3 "
 		q += "AND Origin.depth_value BETWEEN 0 AND 80 "
-		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 2.0 AND 10.0 "
+		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 4.2 AND 10.0 "
 		IDIt = dba.getObjectIterator(q, datamodel.Event.TypeInfo())
 		for i in range(IDIt.fieldCount()):
-			evIDs.append(IDIt.field(i))
+			evs={"ID":[IDIt.field(0)],"lat":[IDIt.field(1)],"lon":[IDIt.field(2)],"deep":[IDIt.field(3)],"mag":[IDIt.field(4)],"time":[IDIt.field(5)]}
 		try:
 			while IDIt.next():
 				for i in range(IDIt.fieldCount()):
-					evIDs.append(IDIt.field(i))
+					if i == 0:
+						evs["ID"].append(IDIt.field(i))
+					elif i == 1:
+						evs["lat"].append(IDIt.field(i))
+					elif i == 2:
+						evs["lon"].append(IDIt.field(i))
+					elif i == 3:
+						evs["deep"].append(IDIt.field(i))
+					elif i == 4:
+						evs["mag"].append(IDIt.field(i))
+					elif i == 5:
+						evs["time"].append(IDIt.field(i))
 		except:
 			pass
-		return evIDs
+		return evs
 
 	def oriQuery(self, evIDs):
 		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
@@ -246,25 +285,28 @@ class sceewv(Application):
 		sFstTime = float(str(sArr[0]).split(" ")[4])
 		return pFourTime,sFstTime
 
-	def staDens(self, natSts):
+	def extCat(self):
 		fdsnwsClient = "https://earthquake.usgs.gov/"
-		deltaDays = 180
-		minlat = 13.2
-		maxlat = 14.4
-		minlon = -90.2
-		maxlon = -87.7
+		deltaDays = 30
+		minlat = 9.5
+		maxlat = 15.0
+		minlon = -92.0
+		maxlon = -81.0
 		minmag = 2.0
 		maxmag = 10.0
 		densEve = []
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
-
 		client = Client(fdsnwsClient)
 		cat = client.get_events(starttime=startTime,endtime=endTime,
 					minmagnitude=minmag,maxmagnitude=maxmag,
 					minlatitude=minlat,maxlatitude=maxlat,
 					minlongitude=minlon,maxlongitude=maxlon)
+		return cat
+
+	def staDens(self, natSts):
+		cat = self.extCat()
 		for event in cat:
 			ori = event.preferred_origin()
 			oriLat = ori.latitude

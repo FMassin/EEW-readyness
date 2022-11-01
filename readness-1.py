@@ -29,88 +29,120 @@ class sceewv(Application):
 		qcMargin = 86400
 		staAcel=None
 		natSts, wfIDs = self.getStas(net)
-		# for wfID in wfIDs:
-			# cond = 0
-			# for metric in qcParams:
-				# qc = self.qcquery(wfID, metric, qcMargin)
-				# qcMed = np.median(qc)
-				# if math.isnan(qcMed) or abs(qcMed) > 2:
-					# cond = 1
-			# if cond == 0:
-				# if staAcel is not None:
-					# staAcel["station"].append(wfID.stationCode())
-					# staAcel["metric"].append(metric)
-					# staAcel["value"].append(qcMed)
-				# else:
-					# staAcel={"station":[wfID.stationCode()],"metric":[metric], "value":[qcMed]}
-		# print("National stations %s" % len(natSts))
-		# print("Vertical channels of national stations with accelerometer %s" % len(wfIDs))
-		# print("Number of national station with accelerometer and |delay|<2, |latency|<2: %s" % len(staAcel["station"]))
-		# print(staAcel)
-		# ###1.1.2
-		# events, densEve = self.staDens(natSts)
-		# print("%i Eventos en el catalogo " % (len(events)))
-		# print("%i Eventos con 4Pth tt < 1Sth tt " % (len(densEve)))
+		for wfID in wfIDs:
+			cond = 0
+			for metric in qcParams:
+				qc = self.qcquery(wfID, metric, qcMargin)
+				qcMed = np.median(qc)
+				if math.isnan(qcMed) or abs(qcMed) > 2:
+					cond = 1
+			if cond == 0:
+				if staAcel is not None:
+					staAcel["station"].append(wfID.stationCode())
+					staAcel["metric"].append(metric)
+					staAcel["value"].append(qcMed)
+				else:
+					staAcel={"station":[wfID.stationCode()],"metric":[metric], "value":[qcMed]}
+		print("National stations %s" % len(natSts))
+		print("Vertical channels of national stations with accelerometer %s" % len(wfIDs))
+		print("Number of national station with accelerometer and |delay|<2, |latency|<2: %s" % len(staAcel["station"]))
+		print(staAcel)
+		###1.1.2
+		events, densEve = self.staDens(natSts)
+		print("%i Eventos en el catalogo " % (len(events)))
+		print("%i Eventos con 4Pth tt < 1Sth tt " % (len(densEve)))
 		###1.2.1
-		# staNoise = self.readJSON(["psd_value","psd_means_ratio"])
-		# staBlack = self.mixSta(staNoise['station'], natSts)
-		# print("National stations %s" % len(natSts))
-		# print("National stations with noise alerts %s" % len(staBlack))
-		# ###3.2.1
-		# staTele = self.readJSON("latency")
-		# staBlack = self.mixSta(staTele['station'], natSts)
-		# print("National stations %s" % len(natSts))
-		# print("National stations with latency alerts %s" % len(staBlack))
-		# ###3.2.3
-		# staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
-		# staBlack = self.mixSta(staQC['station'], natSts)
-		# print("National stations %s" % len(natSts))
-		# print("National stations with any qc alert %s" % len(staBlack))
+		staNoise = self.readJSON(["psd_value","psd_means_ratio"])
+		staBlack = self.mixSta(staNoise['station'], natSts)
+		print("National stations %s" % len(natSts))
+		print("National stations with noise alerts %s" % len(staBlack))
+		###3.2.1
+		staTele = self.readJSON("latency")
+		staBlack = self.mixSta(staTele['station'], natSts)
+		print("National stations %s" % len(natSts))
+		print("National stations with latency alerts %s" % len(staBlack))
+		###3.2.3
+		staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
+		staBlack = self.mixSta(staQC['station'], natSts)
+		print("National stations %s" % len(natSts))
+		print("National stations with any qc alert %s" % len(staBlack))
 		###4.1.1
 		deltaDays=30
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
-		# for sta in natSts:
-			# # print("National station %s"%sta.code())
-			# cond = self.ampQuery(sta.code(),startTime)
-			# if cond == 1:
-				# # print("Station with manual amplitude %s"%sta.code())
-				# continue
-			# else:
-				# print("Station without manual amplitude %s"%sta.code())
-		# ###4.1.2
-		# # self.mvsQuery(startTime)
-		# for sta in natSts:
-			# # print("National station %s"%sta.code())
-			# cond = self.mvsQuery(startTime,sta.code())
-			# if cond == 1:
-				# # print("Station with MVS amplitude %s"%sta.code())
-				# continue
-			# else:
-				# print("Station without MVS amplitude %s"%sta.code())
+		for sta in natSts:
+			# print("National station %s"%sta.code())
+			cond = self.ampQuery(sta.code(),startTime)
+			if cond == 1:
+				# print("Station with manual amplitude %s"%sta.code())
+				continue
+			else:
+				print("Station without manual amplitude %s"%sta.code())
+		###4.1.2
+		self.mvsQuery(startTime)
+		for sta in natSts:
+			# print("National station %s"%sta.code())
+			cond = self.mvsQuery(startTime,sta.code())
+			if cond == 1:
+				print("Station with MVS amplitude %s"%sta.code())
+				continue
+			else:
+				print("Station without MVS amplitude %s"%sta.code())
 		##4.2.1
-		
-		# endTime = core.Time.GMT()
-		# startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
-		#evs = self.IDQuery(startTime,endTime)
-		#self.oriQuery(evs["ID"])
-		
+		endTime = core.Time.GMT()
+		startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
+		evs = self.IDQuery(startTime,endTime)
+		self.oriQuery(evs["ID"])
 		##4.2.3
-		
 		evs = self.IDQuery(startTime,endTime)
 		extCat = self.extCat()
 		self.compEve(extCat,evs)
-
-		#4.2.4
-		
-		#4.2.5
-		
-		#5.1
-		
-		#5.2
+		###4.2.4
+		evs = self.IDQuery(startTime,endTime)
+		extCat = self.extCat()
+		self.compEve(extCat,evs)
+		###4.2.5
+		###5.1
+		evs = self.IDQuery(startTime,endTime)
+		for i in range(len(evs["ID"])):
+			if evs["evalMode"][i] == "manual":
+				print("Event %s with preferred manual solution"%evs["ID"][i])
+			else:
+				print("Event %s without preferred manual solution"%evs["ID"][i])
+		###5.2
+		self.invSlink(natSts)
 		return True
 
+	def invSlink(self, natSts):
+		blackLoc = ["99"]
+		whiteChan = ["HN", "EN", "SN", "HH", "EH", "SH"]
+		# client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
+		client = seedClient('localhost',port=18001,timeout=1,debug=False)
+		t = UTCDateTime() - 100
+		for station in natSts:
+			sta = station.code()
+			locs = station.sensorLocationCount()
+			for l in range(locs):
+				location = station.sensorLocation(l)
+				loc = location.code()
+				if loc not in blackLoc:
+					chans = location.streamCount()
+					for c in range(chans):
+						channel = location.stream(c)
+						chan = channel.code()
+						if chan[0:2] in whiteChan:
+							name=[sta,loc,chan]
+							try:
+								info = client.get_info(station=sta,location=loc,channel=chan,level="channel")
+								if len(info) > 0:
+									print("Channel in seedlink client %s"%info)
+								else:
+									print("Channel not in seedlink client %s"%name)
+							except Exception as e:
+								print("Channel not in seedlink client %s"%name)
+								print("Error: %s"%e)
+		return
 
 	def compEve(self,extCat,evs):
 		deltaMin = 5
@@ -141,7 +173,7 @@ class sceewv(Application):
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
-		q = "SELECT PEvent.publicID, Origin.latitude_value, Origin.longitude_value, Origin.depth_value, Magnitude.magnitude_value, Origin.time_value "
+		q = "SELECT PEvent.publicID, Origin.latitude_value, Origin.longitude_value, Origin.depth_value, Magnitude.magnitude_value, Origin.time_value, Origin.evaluationMode "
 		q += "FROM Event, PublicObject AS PEvent, Origin, PublicObject AS POrigin, Magnitude, PublicObject AS PMagnitude "
 		q += "WHERE Origin._oid = POrigin._oid "
 		q += "AND Event._oid = PEvent._oid "
@@ -154,10 +186,9 @@ class sceewv(Application):
 		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 10.0 AND 14.53 "
 		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -91.4 AND -86.3 "
 		q += "AND Origin.depth_value BETWEEN 0 AND 80 "
-		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 4.2 AND 10.0 "
+		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 3.5 AND 10.0 "
 		IDIt = dba.getObjectIterator(q, datamodel.Event.TypeInfo())
-		for i in range(IDIt.fieldCount()):
-			evs={"ID":[IDIt.field(0)],"lat":[IDIt.field(1)],"lon":[IDIt.field(2)],"deep":[IDIt.field(3)],"mag":[IDIt.field(4)],"time":[IDIt.field(5)]}
+		evs={"ID":[IDIt.field(0)],"lat":[IDIt.field(1)],"lon":[IDIt.field(2)],"deep":[IDIt.field(3)],"mag":[IDIt.field(4)],"time":[IDIt.field(5)],"evalMode":[IDIt.field(6)]}
 		try:
 			while IDIt.next():
 				for i in range(IDIt.fieldCount()):
@@ -173,6 +204,8 @@ class sceewv(Application):
 						evs["mag"].append(IDIt.field(i))
 					elif i == 5:
 						evs["time"].append(IDIt.field(i))
+					elif i == 6:
+						evs["evalMode"].append(IDIt.field(i))
 		except:
 			pass
 		return evs
@@ -383,34 +416,6 @@ class sceewv(Application):
 			wfIDs.append(wfID)
 		return stations, wfIDs
 
-	# def run(self):
-		# self.checkMod()
-		# stas = []
-		# stas = [item for item in input('Enter names (net.code net2.code2) of stations installed during the last six months: ').split()]
-		# print(stas)
-		# now = core.Time.GMT()
-		# inv = Inventory.Instance()
-		# for sta in stas:
-			# st = inv.getStation(sta.split(".")[0],sta.split(".")[1],now)
-			# if not st:
-				# print("%s is not in the inventory, please check"%sta)
-			# eewSts = self.readBind(sta)
-		# print("%i Stations with EEW picker binding"%len(eewSts))
-		# noDat = self.staAval(eewSts)
-		# print("%i Stations with EEW binding but not streaming"%len(noDat))
-		# eewInvSts = []
-		# means = []
-		# for sta in eewSts:
-			# st = inv.getStation(sta.split(".")[0],sta.split(".")[1],now)
-			# eewInvSts.append(st)
-			# mean = self.ppsd(sta)
-			# if mean:
-				# means = means+mean
-		# self.staDens(eewInvSts)
-		# means = np.mean(means, axis=0)
-		# print(means)
-		# return True
-
 	# def checkMod(self):
 		# ei = system.Environment.Instance()
 		# root = ei.installDir()
@@ -430,7 +435,6 @@ class sceewv(Application):
 				# print("%s not enabled, please check" % module)
 			# if not run:
 				# print("%s not running please check" % module)
-
 
 	# def readBind(self, sta):
 		# eewMods =  ["scvspick", "scvsnpick"]
@@ -462,112 +466,6 @@ class sceewv(Application):
 			# if not cond:
 				# print("%s not bind with %s, please check"%(sta,mod))
 		# return eewSts
-
-	# def staAval(self, eewSts):
-		# noDat = []
-		# client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
-		# t = UTCDateTime() - 100
-		# #client = create_client('192.168.2.245:18000', on_data=self.onData)
-		# #client.get_info('ID')
-		# for sta in eewSts:
-			# net = sta.split(".")[0]
-			# code = sta.split(".")[1]
-			# #print("station %s"%sta)
-			# try:
-				# st = client.get_waveforms(net, code, "??", "???", t, t + 5)
-				# stNum = int(str(st).split()[0])
-				# if stNum == 0:
-					# print("No data for %s"%sta) 
-					# noDat.append(sta)
-			# except Exception as e:
-				# print("Seedling client to %s.%s failed"%(net,code))
-				# print(e)
-				# continue
-			# #client.select_stream(sta.split(".")[0], sta.split(".")[1], '???') 
-			# #client.connect()
-			# #client.run()
-			# #client.close()
-			# #client.select_stream("SV", "CNCH", '???')
-		# return noDat
-	# def onData(self, trace):
-		# print('Received new data:')
-		# print(trace)
-		# print()
-	# def staDens(self, invSts):
-		# fdsnwsClient = "https://earthquake.usgs.gov/"
-		# deltaDays = 180
-		# minlat = 13.2
-		# maxlat = 14.4
-		# minlon = -90.2
-		# maxlon = -87.7
-		# minmag = 2.0
-		# maxmag = 10.0
-		# fourDist = []
-		# today = date.today()
-		# endTime = today
-		# startTime = endTime - timedelta(days=deltaDays)
-
-		# client = Client(fdsnwsClient)
-		# cat = client.get_events(starttime=startTime,endtime=endTime,
-					# minmagnitude=minmag,maxmagnitude=maxmag,
-					# minlatitude=minlat,maxlatitude=maxlat,
-					# minlongitude=minlon,maxlongitude=maxlon)
-		# for event in cat:
-			# ori = event.preferred_origin()
-			# oriLat = ori.latitude
-			# oriLon = ori.longitude
-			# dists = False
-			# for sta in invSts:
-				# if sta:
-					# staLat = sta.latitude()
-					# staLon = sta.longitude()
-					# dist = locations2degrees(oriLat, oriLon, staLat, staLon)*111.1
-					# if not dists:
-						# dists = {"sta":[sta.code()],"dist":[dist]}
-					# else:
-						# dists["sta"].append(sta.code())
-						# dists["dist"].append(dist)
-			# dists = pd.DataFrame(dists)
-			# dists.sort_values(by='dist')
-			# fourDist.append(dists.loc[3,"dist"])
-		# print("4th station distances for each even%s"%fourDist)
-		# print("85 percentile of 4th distances %s"%round(np.percentile(fourDist,85),2))
-
-	# def get_miniseed(self,stream):
-		# fdsnws = "http://localhost:8080" 
-		# clientWf = Client(fdsnws)
-
-		# todayUnix = int(time.time()) 
-		# yesterdayUnix = todayUnix - 86400
-		# today = datetime.datetime.fromtimestamp(todayUnix).strftime('%Y-%m-%d')
-		# t = UTCDateTime(today)
-
-		# yesterday = datetime.datetime.fromtimestamp(yesterdayUnix).strftime('%Y-%m-%d')
-		# ty= UTCDateTime(yesterday)
-		# try:
-			# net = stream.split(".")[0]
-			# staCode = stream.split(".")[1]
-			# st = clientWf.get_waveforms(net, staCode, ",00", "HN?,EN?,SN?,HH?,EH?,SH?", ty, t)
-			# inv = clientWf.get_stations(network=net, station=staCode,location=",00", channel = "HN?,EN?,SN?,HH?,EH?,SH?", level="response" )
-			# print("Obtained waveform for:")
-			# print(stream)
-			# return st, inv
-		# except Exception as e:
-			# print("no waveform for:")
-			# print(stream)
-			# print(e)
-			# return None, None
-	# def ppsd(self, stream):
-		# numPools = 5
-		# st, inv = self.get_miniseed(stream)
-		# if st == None:
-			# return
-		# means = []
-		# for tr in st:
-			# ppsd = PPSD(tr.stats, metadata=inv)
-			# ppsd.add(st)
-			# means.append(ppsd.get_mean()[1])
-		# return means
 
 app = sceewv()
 sys.exit(app())

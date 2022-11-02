@@ -23,104 +23,138 @@ class sceewv(Application):
 		# self.setConfigModuleName("")
 
 	def run(self):
-		###1.1.1
+		test = "5.2"
 		net = "SV"
-		qcParams = ["delay","latency"]
-		qcMargin = 86400
-		staAcel=None
-		natSts, wfIDs = self.getStas(net)
-		for wfID in wfIDs:
-			cond = 0
-			for metric in qcParams:
-				qc = self.qcquery(wfID, metric, qcMargin)
-				qcMed = np.median(qc)
-				if math.isnan(qcMed) or abs(qcMed) > 2:
-					cond = 1
-			if cond == 0:
-				if staAcel is not None:
-					staAcel["station"].append(wfID.stationCode())
-					staAcel["metric"].append(metric)
-					staAcel["value"].append(qcMed)
-				else:
-					staAcel={"station":[wfID.stationCode()],"metric":[metric], "value":[qcMed]}
-		print("National stations %s" % len(natSts))
-		print("Vertical channels of national stations with accelerometer %s" % len(wfIDs))
-		print("Number of national station with accelerometer and |delay|<2, |latency|<2: %s" % len(staAcel["station"]))
-		print(staAcel)
-		###1.1.2
-		events, densEve = self.staDens(natSts)
-		print("%i Eventos en el catalogo " % (len(events)))
-		print("%i Eventos con 4Pth tt < 1Sth tt " % (len(densEve)))
-		###1.2.1
-		staNoise = self.readJSON(["psd_value","psd_means_ratio"])
-		staBlack = self.mixSta(staNoise['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with noise alerts %s" % len(staBlack))
-		###3.2.1
-		staTele = self.readJSON("latency")
-		staBlack = self.mixSta(staTele['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with latency alerts %s" % len(staBlack))
-		###3.2.3
-		staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
-		staBlack = self.mixSta(staQC['station'], natSts)
-		print("National stations %s" % len(natSts))
-		print("National stations with any qc alert %s" % len(staBlack))
-		###4.1.1
-		deltaDays=30
+		deltaDays=90
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
-		for sta in natSts:
-			# print("National station %s"%sta.code())
-			cond = self.ampQuery(sta.code(),startTime)
-			if cond == 1:
-				# print("Station with manual amplitude %s"%sta.code())
-				continue
-			else:
-				print("Station without manual amplitude %s"%sta.code())
+		natSts, wfIDs = self.getStas(net)
+		###1.1.1
+		if test == "1.1.1":
+#			qcParams = ["delay","latency"]
+			qcParams = ["latency"]
+			qcMargin = 86400
+			staAcel=None
+			for wfID in wfIDs:
+				cond = 0
+				for metric in qcParams:
+					qc = self.qcquery(wfID, metric, qcMargin)
+					qcMed = np.median(qc)
+					if math.isnan(qcMed) or abs(qcMed) > 2:
+						cond = 1
+				if cond == 0:
+					if staAcel is not None:
+						staAcel["station"].append(wfID.stationCode())
+						staAcel["metric"].append(metric)
+						staAcel["value"].append(qcMed)
+					else:
+						staAcel={"station":[wfID.stationCode()],"metric":[metric], "value":[qcMed]}
+			print("National stations %s" % len(natSts))
+			print("Vertical channels of national stations with accelerometer %s" % len(wfIDs))
+#			print("Number of national station with accelerometer and |delay|<2, |latency|<2: %s" % len(staAcel["station"]))
+			print("Number of national station with accelerometer and |latency|<2: %s" % len(staAcel["station"]))
+			print(staAcel)
+		###1.1.2
+		elif test == "1.1.2":
+			events, densEve = self.staDens(natSts)
+			print("%i Eventos en el catalogo " % (len(events)))
+			print("%i Eventos con 4Pth tt < 1Sth tt " % (len(densEve)))
+		###1.2.1
+		elif test == "1.2.1":
+			staNoise = self.readJSON(["psd_value","psd_means_ratio"])
+			staBlack = self.mixSta(staNoise, natSts)
+			print("National stations %s" % len(natSts))
+			print("National stations with noise alerts %s" % len(staBlack))
+		###3.2.1
+		elif test == "3.2.1":
+			staTele = self.readJSON("latency")
+			staBlack = self.mixSta(staTele, natSts)
+			print("National stations %s" % len(natSts))
+			print("National stations with latency alerts %s" % len(staBlack))
+		###3.2.3
+		elif test == "3.2.3":
+			staQC = self.readJSON(["latency","delay","timing","gap","offset","overlap","availability","spike","rms"])
+			staBlack = self.mixSta(staQC, natSts)
+			print("National stations %s" % len(natSts))
+			print("National stations with any qc alert %s" % len(staBlack))
+		###4.1.1
+		elif test == "4.1.1":
+			staMAN,staNO = [],[]
+			for sta in natSts:
+				# print("National station %s"%sta.code())
+				cond = self.ampQuery(sta.code(),startTime)
+				if cond == 1:
+					staMAN.append(sta.code())
+					#print("Station with manual amplitude %s"%sta.code())
+					#continue
+				else:
+					staNO.append(sta.code())
+					#print("Station without manual amplitude %s"%sta.code())
+			print("National stations %s" % len(natSts))
+			print("National stations with manual amplitudes %s" % len(staMAN))
+			print("National stations without manual amplitudes %s" % len(staNO))
 		###4.1.2
-		self.mvsQuery(startTime)
-		for sta in natSts:
-			# print("National station %s"%sta.code())
-			cond = self.mvsQuery(startTime,sta.code())
-			if cond == 1:
-				print("Station with MVS amplitude %s"%sta.code())
-				continue
-			else:
-				print("Station without MVS amplitude %s"%sta.code())
+		elif test == "4.1.2":
+			staMVS,staNO=[],[]
+			for sta in natSts:
+				# print("National station %s"%sta.code())
+				cond = self.mvsQuery(startTime,sta.code())
+				if cond == 1:
+					staMVS.append(sta.code())
+					#print("Station with MVS amplitude %s"%sta.code())
+					#continue
+				else:
+					staNO.append(sta.code())
+					#print("Station without MVS amplitude %s"%sta.code())
+			print("National stations %s" % len(natSts))
+			print("National stations with MVS amplitudes %s" % len(staMVS))
+			print("National stations without MVS amplitudes %s" % len(staNO))
 		##4.2.1
-		endTime = core.Time.GMT()
-		startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
-		evs = self.IDQuery(startTime,endTime)
-		self.oriQuery(evs["ID"])
-		##4.2.3
-		evs = self.IDQuery(startTime,endTime)
-		extCat = self.extCat()
-		self.compEve(extCat,evs)
+		elif test == "4.2.1":
+			#endTime = core.Time.GMT()
+			#startTime = endTime - core.TimeSpan(deltaDays*24*60*60)
+			evs = self.IDQuery(startTime,endTime)
+			self.oriQuery(evs["ID"])
+		##4.2.2
+		elif test == "4.2.2":
+			evs = self.IDQuery(startTime,endTime)
+			extCat = self.extCat()
+			self.compEve(extCat,evs)
+		###4.2.3
+		elif test == "4.2.3":
+			evs = self.IDQuery(startTime,endTime)
+			extCat = self.extCat()
+			self.compEve(extCat,evs)
 		###4.2.4
-		evs = self.IDQuery(startTime,endTime)
-		extCat = self.extCat()
-		self.compEve(extCat,evs)
-		###4.2.5
 		###5.1
-		evs = self.IDQuery(startTime,endTime)
-		for i in range(len(evs["ID"])):
-			if evs["evalMode"][i] == "manual":
-				print("Event %s with preferred manual solution"%evs["ID"][i])
-			else:
-				print("Event %s without preferred manual solution"%evs["ID"][i])
+		elif test == "5.1":
+			evsMAN,evsAUT=[],[]
+			evs = self.IDQuery(startTime,endTime)
+			for i in range(len(evs["ID"])):
+				if evs["evalMode"][i] == "manual":
+					evsMAN.append(evs["ID"][i])
+					#print("Event %s with preferred manual solution"%evs["ID"][i])
+				else:
+					evsAUT.append(evs["ID"][i])
+					#print("Event %s without preferred manual solution"%evs["ID"][i])
+			print("Events over thresholds %s" % len(evs["ID"]))
+			print("Events with preferred manual solution %s" % len(evsMAN))
+			print("Events with preferred automatic solution %s" % len(evsAUT))
 		###5.2
-		self.invSlink(natSts)
+		elif test == "5.2":
+			self.invSlink(natSts)
 		return True
 
 	def invSlink(self, natSts):
+		staSLK,staNO=[],[]
 		blackLoc = ["99"]
 		whiteChan = ["HN", "EN", "SN", "HH", "EH", "SH"]
 		# client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
-		client = seedClient('localhost',port=18001,timeout=1,debug=False)
+		client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
 		t = UTCDateTime() - 100
 		for station in natSts:
+			cond = 1
 			sta = station.code()
 			locs = station.sensorLocationCount()
 			for l in range(locs):
@@ -138,13 +172,23 @@ class sceewv(Application):
 								if len(info) > 0:
 									print("Channel in seedlink client %s"%info)
 								else:
-									print("Channel not in seedlink client %s"%name)
+									#print("Channel not in seedlink client %s"%name)
+									cond = 0
 							except Exception as e:
-								print("Channel not in seedlink client %s"%name)
-								print("Error: %s"%e)
+								#print("Channel not in seedlink client %s"%name)
+								#print("Error: %s"%e)
+								cond = 0
+			if cond == 1:
+				staSLK.append(sta)
+			else:
+				staNO.append(sta)
+		print("National stations %s" % len(natSts))
+		print("Stations matching with slink %s" % len(staSLK))
+		print("Stations not matching with slink %s" % len(staNO))
 		return
 
 	def compEve(self,extCat,evs):
+		tp,fp=[],[]
 		deltaMin = 5
 		deltaDist = 2
 		minute_delta = timedelta(minutes=deltaMin)
@@ -161,15 +205,20 @@ class sceewv(Application):
 					deltaLat = abs(origin.latitude - oriLat)
 					deltaLon = abs(origin.longitude - oriLon)
 					if deltaTime < minute_delta and deltaLat < degree_delta and deltaLon < degree_delta:
-						print("Event %s is a True Positive"%evs["ID"][i])
+						tp.append(evs["ID"][i])
+						#print("Event %s is a True Positive"%evs["ID"][i])
 						cond = 1
 			if cond == 0:
-				print("Event %s is not a True Positive"%evs["ID"][i])
+				fp.append(evs["ID"][i])
+				#print("Event %s is not a True Positive"%evs["ID"][i])
+		print("Number of events over thresholds %s"%len(evs["time"]))
+		print("Number of true positives %s"%len(tp))
+		print("Number of false positives %s"%len(fp))
 		return
 
 	def IDQuery(self, startTime, endTime):
 		evIDs = []
-		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
@@ -186,7 +235,7 @@ class sceewv(Application):
 		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 10.0 AND 14.53 "
 		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -91.4 AND -86.3 "
 		q += "AND Origin.depth_value BETWEEN 0 AND 80 "
-		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 3.5 AND 10.0 "
+		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 2.0 AND 10.0 "
 		IDIt = dba.getObjectIterator(q, datamodel.Event.TypeInfo())
 		evs={"ID":[IDIt.field(0)],"lat":[IDIt.field(1)],"lon":[IDIt.field(2)],"deep":[IDIt.field(3)],"mag":[IDIt.field(4)],"time":[IDIt.field(5)],"evalMode":[IDIt.field(6)]}
 		try:
@@ -211,13 +260,14 @@ class sceewv(Application):
 		return evs
 
 	def oriQuery(self, evIDs):
-		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		eveEEW,eveNOeew=[],[]
+		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		query = datamodel.DatabaseQuery(db)
 		for eventID in evIDs:
 			originsID=[]
 			cond = 0
-			print("EVENT %s"%eventID)
+			#print("EVENT %s"%eventID)
 			for obj in query.getOriginsDescending(eventID):
 				origin = datamodel.Origin.Cast(obj)
 				originsID.append(origin.publicID())
@@ -231,13 +281,18 @@ class sceewv(Application):
 							for num_com in range(mag.commentCount()):
 								comment = mag.comment(num_com)
 								if comment.id() == 'EEW':
-									print("EVENT with EEW message %s "%eventID)
-									print(comment.id(),comment.text())
+									#print("EVENT with EEW message %s "%eventID)
+									#print(comment.id(),comment.text())
+									eveEEW.append(eventID)
 									cond = 1
-
+			if cond == 0:
+				eveNOeew.append(eventID)
+		print("Number of events over thresholds %s"%len(evIDs))
+		print("Number of events with EEW message %s"%len(eveEEW))
+		print("Number of events without EEW mssage %s"%len(eveNOeew))
 	def mvsQuery(self,startTime,staName):
 		cond = 0
-		eewDBuri = "mysql://sysop:sys0pm4rn@127.0.0.1:3345/seiscomp3"
+		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
@@ -259,7 +314,8 @@ class sceewv(Application):
 	def ampQuery(self,staName,startTime):
 		cond = 0
 		evalMode = "0, manual"
-		db = io.DatabaseInterface.Open(self.databaseURI())
+		dbURIproc = "mysql://sysop:sysop@192.168.2.245/seiscomp"
+		db = io.DatabaseInterface.Open(dbURIproc)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
 		q = "SELECT * from Amplitude " \
@@ -280,19 +336,21 @@ class sceewv(Application):
 
 	def mixSta(self, stasOne, stasSec):
 		staBlack = []
-		for item in stasOne:
-			sta1 = item.split(".")[1]
-			for station in stasSec:
-				sta2 = station.code()
-				if sta1 == sta2:
-					if sta2 not in staBlack:
-						staBlack.append(sta2)
+		numAlerts = 20
+		for i in range(len(stasOne["station"])):
+			if stasOne["numberAlerts"][i] > numAlerts:
+				sta1 = stasOne["station"][i].split(".")[1]
+				for station in stasSec:
+					sta2 = station.code()
+					if sta1 == sta2:
+						if sta2 not in staBlack:
+							staBlack.append(sta2)
 		return staBlack
 
 	def readJSON(self, metrics):
-		jdays = np.arange(150,200,1,dtype=int)
+		jdays = np.arange(215,305,1,dtype=int)
 		staNoise = None
-		json_path = "/home/cam/EEW/sceewv/json_db/sceewv/scqcalert"
+		json_path = "/opt/seiscomp/share/scqcalert"
 		for root, dirs, files in os.walk(json_path):
 			for jday in jdays:
 				for item in fnmatch.filter(files, "*."+str(jday)):
@@ -320,14 +378,13 @@ class sceewv(Application):
 
 	def extCat(self):
 		fdsnwsClient = "https://earthquake.usgs.gov/"
-		deltaDays = 30
+		deltaDays = 90
 		minlat = 9.5
 		maxlat = 15.0
 		minlon = -92.0
-		maxlon = -81.0
+		maxlon = -86.0
 		minmag = 2.0
 		maxmag = 10.0
-		densEve = []
 		today = date.today()
 		endTime = today
 		startTime = endTime - timedelta(days=deltaDays)
@@ -339,6 +396,7 @@ class sceewv(Application):
 		return cat
 
 	def staDens(self, natSts):
+		densEve = []
 		cat = self.extCat()
 		for event in cat:
 			ori = event.preferred_origin()
@@ -369,7 +427,10 @@ class sceewv(Application):
 		qc_vec = []
 		startTime = core.Time.GMT() - core.TimeSpan(qcMargin)
 		endTime = core.Time.GMT()
-		query = datamodel.DatabaseQuery(self.database())
+		dbURIproc = "mysql://sysop:sysop@192.168.2.245/seiscomp"
+		db = io.DatabaseInterface.Open(dbURIproc)
+		#dba = datamodel.DatabaseArchive(db)
+		query = datamodel.DatabaseQuery(db)
 		for obj in query.getWaveformQuality(stName,param,startTime,endTime):
 			qc = datamodel.WaveformQuality.Cast(obj)
 			qc_vec.append(qc.value())

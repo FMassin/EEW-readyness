@@ -24,7 +24,7 @@ class sceewv(Application):
 
 	def run(self):
 		test = "5.2"
-		net = "SV"
+		net = "OV"
 		deltaDays=90
 		today = date.today()
 		endTime = today
@@ -32,8 +32,8 @@ class sceewv(Application):
 		natSts, wfIDs = self.getStas(net)
 		###1.1.1
 		if test == "1.1.1":
-#			qcParams = ["delay","latency"]
-			qcParams = ["latency"]
+			qcParams = ["delay","latency"]
+#			qcParams = ["latency"]
 			qcMargin = 86400
 			staAcel=None
 			for wfID in wfIDs:
@@ -151,7 +151,7 @@ class sceewv(Application):
 		blackLoc = ["99"]
 		whiteChan = ["HN", "EN", "SN", "HH", "EH", "SH"]
 		# client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
-		client = seedClient('192.168.2.245',port=18000,timeout=1,debug=False)
+		client = seedClient('10.10.128.89',port=18000,timeout=1,debug=False)
 		t = UTCDateTime() - 100
 		for station in natSts:
 			cond = 1
@@ -175,8 +175,8 @@ class sceewv(Application):
 									#print("Channel not in seedlink client %s"%name)
 									cond = 0
 							except Exception as e:
-								#print("Channel not in seedlink client %s"%name)
-								#print("Error: %s"%e)
+								print("Channel not in seedlink client %s"%name)
+								print("Error: %s"%e)
 								cond = 0
 			if cond == 1:
 				staSLK.append(sta)
@@ -218,7 +218,7 @@ class sceewv(Application):
 
 	def IDQuery(self, startTime, endTime):
 		evIDs = []
-		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
+		eewDBuri = "mysql://sysop:sys0p0vs1c0r1@localhost/seiscomp"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
@@ -232,8 +232,8 @@ class sceewv(Application):
 		q += "AND Event.preferredMagnitudeID = PMagnitude.publicID "
 		q += "AND Origin.time_value BETWEEN '{0}' AND '{1}' "\
 			.format(startTime,endTime)
-		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 10.0 AND 14.53 "
-		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -91.4 AND -86.3 "
+		q += "AND ROUND(Origin.latitude_value,2) BETWEEN 6.1 AND 11.5 "
+		q += "AND ROUND(Origin.longitude_value,2) BETWEEN -86.8 AND -82.2 "
 		q += "AND Origin.depth_value BETWEEN 0 AND 80 "
 		q += "AND ROUND(Magnitude.magnitude_value,1) BETWEEN 2.0 AND 10.0 "
 		IDIt = dba.getObjectIterator(q, datamodel.Event.TypeInfo())
@@ -261,7 +261,7 @@ class sceewv(Application):
 
 	def oriQuery(self, evIDs):
 		eveEEW,eveNOeew=[],[]
-		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
+		eewDBuri = "mysql://sysop:sys0p0vs1c0r1@localhost/seiscomp"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		query = datamodel.DatabaseQuery(db)
 		for eventID in evIDs:
@@ -292,7 +292,7 @@ class sceewv(Application):
 		print("Number of events without EEW mssage %s"%len(eveNOeew))
 	def mvsQuery(self,startTime,staName):
 		cond = 0
-		eewDBuri = "mysql://sysop:sys0pm4rn@localhost/seiscomp3"
+		eewDBuri = "mysql://sysop:sys0p0vs1c0r1@localhost/seiscomp"
 		db = io.DatabaseInterface.Open(eewDBuri)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
@@ -314,7 +314,7 @@ class sceewv(Application):
 	def ampQuery(self,staName,startTime):
 		cond = 0
 		evalMode = "0, manual"
-		dbURIproc = "mysql://sysop:sysop@192.168.2.245/seiscomp"
+		dbURIproc = "mysql://sysop:sysop@10.10.128.91/seiscomp"
 		db = io.DatabaseInterface.Open(dbURIproc)
 		dba = datamodel.DatabaseArchive(db)
 		# build SQL query
@@ -379,10 +379,10 @@ class sceewv(Application):
 	def extCat(self):
 		fdsnwsClient = "https://earthquake.usgs.gov/"
 		deltaDays = 90
-		minlat = 9.5
-		maxlat = 15.0
-		minlon = -92.0
-		maxlon = -86.0
+		minlat = 6.0
+		maxlat = 11.6
+		minlon = -86.9
+		maxlon = -82.2
 		minmag = 2.0
 		maxmag = 10.0
 		today = date.today()
@@ -427,7 +427,7 @@ class sceewv(Application):
 		qc_vec = []
 		startTime = core.Time.GMT() - core.TimeSpan(qcMargin)
 		endTime = core.Time.GMT()
-		dbURIproc = "mysql://sysop:sysop@192.168.2.245/seiscomp"
+		dbURIproc = "mysql://sysop:sysop@10.10.128.91/seiscomp"
 		db = io.DatabaseInterface.Open(dbURIproc)
 		#dba = datamodel.DatabaseArchive(db)
 		query = datamodel.DatabaseQuery(db)
